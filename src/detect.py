@@ -112,7 +112,9 @@ def run(model: str, num_hands: int,
         detector.detect_async(mp_image, time.time_ns() // 1_000_000)
 
         fps_text = 'FPS = {:.1f}'.format(FPS)
-        print(fps_text)
+        if headless or debug:
+            print(fps_text)
+            
         if not headless:
             # Show the FPS
             text_location = (left_margin, row_size)
