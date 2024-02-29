@@ -37,7 +37,8 @@ DETECTION_RESULT = None
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
         min_hand_presence_confidence: float, min_tracking_confidence: float,
-        camera_id: int, width: int, height: int) -> None:
+        camera_id: int, width: int, height: int,
+        headless: int, debug: int) -> None:
     """Continuously run inference on images acquired from the camera.
 
   Args:
@@ -52,6 +53,8 @@ def run(model: str, num_hands: int,
       camera_id: The camera id to be passed to OpenCV.
       width: The width of the frame captured from the camera.
       height: The height of the frame captured from the camera.
+      headless: The flag to run the script without cam feed.
+      debug: The flag to print the handedness and landmarks.
   """
 
     # Start capturing video input from the camera
@@ -108,13 +111,15 @@ def run(model: str, num_hands: int,
         # Run hand landmarker using the model.
         detector.detect_async(mp_image, time.time_ns() // 1_000_000)
 
-        # Show the FPS
         fps_text = 'FPS = {:.1f}'.format(FPS)
-        text_location = (left_margin, row_size)
-        current_frame = image
-        cv2.putText(current_frame, fps_text, text_location,
-                    cv2.FONT_HERSHEY_DUPLEX,
-                    font_size, text_color, font_thickness, cv2.LINE_AA)
+        print(fps_text)
+        if not headless:
+            # Show the FPS
+            text_location = (left_margin, row_size)
+            current_frame = image
+            cv2.putText(current_frame, fps_text, text_location,
+                        cv2.FONT_HERSHEY_DUPLEX,
+                        font_size, text_color, font_thickness, cv2.LINE_AA)
 
         # Landmark visualization parameters.
         MARGIN = 10  # pixels
@@ -130,32 +135,38 @@ def run(model: str, num_hands: int,
 
                 # Draw the hand landmarks.
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+
                 hand_landmarks_proto.landmark.extend([
                     landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y,
                                                     z=landmark.z) for landmark
                     in hand_landmarks
                 ])
-                mp_drawing.draw_landmarks(
-                    current_frame,
-                    hand_landmarks_proto,
-                    mp_hands.HAND_CONNECTIONS,
-                    mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style())
 
-                # Get the top left corner of the detected hand's bounding box.
-                height, width, _ = current_frame.shape
-                x_coordinates = [landmark.x for landmark in hand_landmarks]
-                y_coordinates = [landmark.y for landmark in hand_landmarks]
-                text_x = int(min(x_coordinates) * width)
-                text_y = int(min(y_coordinates) * height) - MARGIN
+                if debug:
+                    print(handedness, hand_landmarks_proto)
 
-                # Draw handedness (left or right hand) on the image.
-                cv2.putText(current_frame, f"{handedness[0].category_name}",
-                            (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
-                            FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS,
-                            cv2.LINE_AA)
+                if not headless:
+                    mp_drawing.draw_landmarks(
+                        current_frame,
+                        hand_landmarks_proto,
+                        mp_hands.HAND_CONNECTIONS,
+                        mp_drawing_styles.get_default_hand_landmarks_style(),
+                        mp_drawing_styles.get_default_hand_connections_style())
 
-        cv2.imshow('hand_landmarker', current_frame)
+                    # Get the top left corner of the detected hand's bounding box.
+                    height, width, _ = current_frame.shape
+                    x_coordinates = [landmark.x for landmark in hand_landmarks]
+                    y_coordinates = [landmark.y for landmark in hand_landmarks]
+                    text_x = int(min(x_coordinates) * width)
+                    text_y = int(min(y_coordinates) * height) - MARGIN
+
+                    # Draw handedness (left or right hand) on the image.
+                    cv2.putText(current_frame, f"{handedness[0].category_name}",
+                                (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
+                                FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS,
+                                cv2.LINE_AA)
+        if not headless:
+            cv2.imshow('hand_landmarker', current_frame)
 
         # Stop the program if the ESC key is pressed.
         if cv2.waitKey(1) == 27:
@@ -197,10 +208,7 @@ def main():
              'considered successful.',
         required=False,
         default=0.5)
-    # Finding the camera ID can be very reliant on platform-dependent methods.
-    # One common approach is to use the fact that camera IDs are usually indexed sequentially by the OS, starting from 0.
-    # Here, we use OpenCV and create a VideoCapture object for each potential ID with 'cap = cv2.VideoCapture(i)'.
-    # If 'cap' is None or not 'cap.isOpened()', it indicates the camera ID is not available.
+    
     parser.add_argument(
         '--cameraId', help='Id of camera.', required=False, default=0)
     parser.add_argument(
@@ -213,11 +221,22 @@ def main():
         help='Height of frame to capture from camera.',
         required=False,
         default=960)
+    parser.add_argument(
+        '--headless',
+        help='Run the script without cam feed.',
+        required=False,
+        default=0)
+    parser.add_argument(
+        '--debug',
+        help='Print the handedness and landmarks.',
+        required=False,
+        default=0)
+    
     args = parser.parse_args()
 
     run(args.model, int(args.numHands), args.minHandDetectionConfidence,
         args.minHandPresenceConfidence, args.minTrackingConfidence,
-        int(args.cameraId), args.frameWidth, args.frameHeight)
+        int(args.cameraId), args.frameWidth, args.frameHeight, args.headless, args.debug)
 
 
 if __name__ == '__main__':
