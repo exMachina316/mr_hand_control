@@ -32,30 +32,33 @@ mp_drawing_styles = mp.solutions.drawing_styles
 COUNTER, FPS = 0, 0
 START_TIME = time.time()
 DETECTION_RESULT = None
-
+REGION_WIDTH = 300
+REGION_HEIGHT = 300
 
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
         min_hand_presence_confidence: float, min_tracking_confidence: float,
         camera_id: int, width: int, height: int,
         headless: int, debug: int) -> None:
-    """Continuously run inference on images acquired from the camera.
+    
+    """
+    Continuously run inference on images acquired from the camera.
 
-  Args:
-      model: Name of the hand landmarker model bundle.
-      num_hands: Max number of hands that can be detected by the landmarker.
-      min_hand_detection_confidence: The minimum confidence score for hand
-        detection to be considered successful.
-      min_hand_presence_confidence: The minimum confidence score of hand
-        presence score in the hand landmark detection.
-      min_tracking_confidence: The minimum confidence score for the hand
-        tracking to be considered successful.
-      camera_id: The camera id to be passed to OpenCV.
-      width: The width of the frame captured from the camera.
-      height: The height of the frame captured from the camera.
-      headless: The flag to run the script without cam feed.
-      debug: The flag to print the handedness and landmarks.
-  """
+    Args:
+        model: Name of the hand landmarker model bundle.
+        num_hands: Max number of hands that can be detected by the landmarker.
+        min_hand_detection_confidence: The minimum confidence score for hand
+            detection to be considered successful.
+        min_hand_presence_confidence: The minimum confidence score of hand
+            presence score in the hand landmark detection.
+        min_tracking_confidence: The minimum confidence score for the hand
+            tracking to be considered successful.
+        camera_id: The camera id to be passed to OpenCV.
+        width: The width of the frame captured from the camera.
+        height: The height of the frame captured from the camera.
+        headless: The flag to run the script without cam feed.
+        debug: The flag to print the handedness and landmarks.
+    """
 
     # Start capturing video input from the camera
     cap = cv2.VideoCapture(camera_id)
@@ -103,6 +106,7 @@ def run(model: str, num_hands: int,
             )
 
         image = cv2.flip(image, 1)
+        image = crop_top_right(image, REGION_WIDTH, REGION_HEIGHT)
 
         # Convert the image from BGR to RGB as required by the TFLite model.
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -178,6 +182,13 @@ def run(model: str, num_hands: int,
     cap.release()
     cv2.destroyAllWindows()
 
+def crop_top_right(image, width, height):
+    # Calculate the coordinates of the top right corner
+    start_row, start_col = 0, image.shape[1] - width
+    end_row, end_col = start_row + height, start_col + width
+    # Crop the image
+    img_cropped = image[start_row:end_row, start_col:end_col]
+    return img_cropped
 
 def main():
     parser = argparse.ArgumentParser(
