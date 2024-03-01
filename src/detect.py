@@ -32,13 +32,14 @@ mp_drawing_styles = mp.solutions.drawing_styles
 COUNTER, FPS = 0, 0
 START_TIME = time.time()
 DETECTION_RESULT = None
-REGION_WIDTH = 300
-REGION_HEIGHT = 300
+region_width = 300
+region_height = 300
 
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
         min_hand_presence_confidence: float, min_tracking_confidence: float,
-        camera_id: int, width: int, height: int,
+        camera_id: int, width: int, height: int, 
+        region_width: int, region_height: int,
         headless: int, debug: int) -> None:
     
     """
@@ -97,95 +98,100 @@ def run(model: str, num_hands: int,
         result_callback=save_result)
     detector = vision.HandLandmarker.create_from_options(options)
 
-    try:
-        # Continuously capture images from the camera and run inference
-        while cap.isOpened():
-            success, image = cap.read()
-            if not success:
-                sys.exit(
-                    'ERROR: Unable to read from webcam. Please verify your webcam settings.'
-                )
+    # try:
 
-            image = cv2.flip(image, 1)
-            image = crop_top_right(image, REGION_WIDTH, REGION_HEIGHT)
+    # Continuously capture images from the camera and run inference
+    while cap.isOpened():
+        success, image = cap.read()
+        if not success:
+            sys.exit(
+                'ERROR: Unable to read from webcam. Please verify your webcam settings.'
+            )
 
-            # Convert the image from BGR to RGB as required by the TFLite model.
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
+        image = cv2.flip(image, 1)
+        image = crop_top_right(image, region_width, region_height)
 
-            # Run hand landmarker using the model.
-            detector.detect_async(mp_image, time.time_ns() // 1_000_000)
+        # Convert the image from BGR to RGB as required by the TFLite model.
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
 
-            fps_text = 'FPS = {:.1f}'.format(FPS)
-            if headless or debug:
-                print(fps_text)
-                
-            if not headless:
-                # Show the FPS
-                text_location = (left_margin, row_size)
-                current_frame = image
-                cv2.putText(current_frame, fps_text, text_location,
-                            cv2.FONT_HERSHEY_DUPLEX,
-                            font_size, text_color, font_thickness, cv2.LINE_AA)
+        # Run hand landmarker using the model.
+        detector.detect_async(mp_image, time.time_ns() // 1_000_000)
 
-            # Landmark visualization parameters.
-            MARGIN = 10  # pixels
-            FONT_SIZE = 1
-            FONT_THICKNESS = 1
-            HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
+        fps_text = 'FPS = {:.1f}'.format(FPS)
+        if headless or debug:
+            print(fps_text)
+            
+        if not headless:
+            # Show the FPS
+            text_location = (left_margin, row_size)
+            current_frame = image
+            cv2.putText(current_frame, fps_text, text_location,
+                        cv2.FONT_HERSHEY_DUPLEX,
+                        font_size, text_color, font_thickness, cv2.LINE_AA)
 
-            if DETECTION_RESULT:
-                # Draw landmarks and indicate handedness.
-                for idx in range(len(DETECTION_RESULT.hand_landmarks)):
-                    hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
-                    handedness = DETECTION_RESULT.handedness[idx]
+        # Landmark visualization parameters.
+        MARGIN = 10  # pixels
+        FONT_SIZE = 1
+        FONT_THICKNESS = 1
+        HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
-                    # Draw the hand landmarks.
-                    hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        if DETECTION_RESULT:
+            # Draw landmarks and indicate handedness.
+            for idx in range(len(DETECTION_RESULT.hand_landmarks)):
+                hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
+                handedness = DETECTION_RESULT.handedness[idx]
 
-                    hand_landmarks_proto.landmark.extend([
-                        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y,
-                                                        z=landmark.z) for landmark
-                        in hand_landmarks
-                    ])
+                # Draw the hand landmarks.
+                hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
 
-                    if debug:
-                        print(handedness, hand_landmarks_proto)
+                hand_landmarks_proto.landmark.extend([
+                    landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y,
+                                                    z=landmark.z) for landmark
+                    in hand_landmarks
+                ])
 
-                    if not headless:
-                        mp_drawing.draw_landmarks(
-                            current_frame,
-                            hand_landmarks_proto,
-                            mp_hands.HAND_CONNECTIONS,
-                            mp_drawing_styles.get_default_hand_landmarks_style(),
-                            mp_drawing_styles.get_default_hand_connections_style())
+                if debug:
+                    print(handedness, hand_landmarks_proto)
 
-                        # Get the top left corner of the detected hand's bounding box.
-                        height, width, _ = current_frame.shape
-                        x_coordinates = [landmark.x for landmark in hand_landmarks]
-                        y_coordinates = [landmark.y for landmark in hand_landmarks]
-                        text_x = int(min(x_coordinates) * width)
-                        text_y = int(min(y_coordinates) * height) - MARGIN
+                if not headless:
+                    mp_drawing.draw_landmarks(
+                        current_frame,
+                        hand_landmarks_proto,
+                        mp_hands.HAND_CONNECTIONS,
+                        mp_drawing_styles.get_default_hand_landmarks_style(),
+                        mp_drawing_styles.get_default_hand_connections_style())
 
-                        # Draw handedness (left or right hand) on the image.
-                        cv2.putText(current_frame, f"{handedness[0].category_name}",
-                                    (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
-                                    FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS,
-                                    cv2.LINE_AA)
-            if not headless:
-                cv2.imshow('hand_landmarker', current_frame)
+                    # Get the top left corner of the detected hand's bounding box.
+                    height, width, _ = current_frame.shape
+                    x_coordinates = [landmark.x for landmark in hand_landmarks]
+                    y_coordinates = [landmark.y for landmark in hand_landmarks]
+                    text_x = int(min(x_coordinates) * width)
+                    text_y = int(min(y_coordinates) * height) - MARGIN
 
-            # Stop the program if the ESC key is pressed.
-            if cv2.waitKey(1) == 27:
-                break
-    except KeyboardInterrupt:
-        print("Closing program...")
+                    # Draw handedness (left or right hand) on the image.
+                    cv2.putText(current_frame, f"{handedness[0].category_name}",
+                                (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
+                                FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS,
+                                cv2.LINE_AA)
+        if not headless:
+            cv2.imshow('hand_landmarker', current_frame)
+
+        # Stop the program if the ESC key is pressed.
+        if cv2.waitKey(1) == 27:
+            break
+    # except KeyboardInterrupt:
+    #     print("\033[91m Closing program...\033[0m")
+
+    # finally:
+    #     detector.close()
+    #     cap.release()
+    #     cv2.destroyAllWindows()
+    #     sys.exit(1)
         
-    finally:
-        detector.close()
-        cap.release()
-        cv2.destroyAllWindows()
-        sys.exit(1)
+    detector.close()
+    cap.release()
+    cv2.destroyAllWindows()
 
 def crop_top_right(image, width, height):
     # Calculate the coordinates of the top right corner
@@ -240,6 +246,16 @@ def main():
         required=False,
         default=960)
     parser.add_argument(
+        '--workWidth',
+        help='',
+        required=False,
+        default=300)
+    parser.add_argument(
+        '--workHeight',
+        help='Print the handedness and landmarks.',
+        required=False,
+        default=300)
+    parser.add_argument(
         '--headless',
         help='Run the script without cam feed.',
         required=False,
@@ -252,10 +268,13 @@ def main():
     
     args = parser.parse_args()
 
-    run(args.model, int(args.numHands), args.minHandDetectionConfidence,
+    run(
+        args.model, int(args.numHands), args.minHandDetectionConfidence,
         args.minHandPresenceConfidence, args.minTrackingConfidence,
-        int(args.cameraId), args.frameWidth, args.frameHeight, args.headless, args.debug)
-
+        int(args.cameraId), args.frameWidth, args.frameHeight, 
+        int(args.workWidth), int(args.workHeight),
+        args.headless, args.debug
+        )
 
 if __name__ == '__main__':
     main()
