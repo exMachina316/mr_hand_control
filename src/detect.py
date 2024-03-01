@@ -23,6 +23,7 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.framework.formats import landmark_pb2
+from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
@@ -38,10 +39,10 @@ region_height = 300
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
         min_hand_presence_confidence: float, min_tracking_confidence: float,
-        camera_id: int, width: int, height: int, 
+        camera_id: int, width: int, height: int,
         region_width: int, region_height: int,
         headless: int, debug: int) -> None:
-    
+
     """
     Continuously run inference on images acquired from the camera.
 
@@ -121,7 +122,7 @@ def run(model: str, num_hands: int,
         fps_text = 'FPS = {:.1f}'.format(FPS)
         if headless or debug:
             print(fps_text)
-            
+
         if not headless:
             # Show the FPS
             text_location = (left_margin, row_size)
@@ -137,12 +138,19 @@ def run(model: str, num_hands: int,
         HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
         if DETECTION_RESULT:
+
             # Draw landmarks and indicate handedness.
             for idx in range(len(DETECTION_RESULT.hand_landmarks)):
                 hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
                 handedness = DETECTION_RESULT.handedness[idx]
+                index_tip_dist = get_dist(hand_landmarks[8])
+                thumb_tip_dist = get_dist(hand_landmarks[4])
+                touch = abs(index_tip_dist - thumb_tip_dist)
+                print(touch)
+                if touch<0.023:
+                    print("\033[91m Touch Detected \033[0m")
 
-                # Draw the hand landmarks.
+                # Draw the hand landmarks
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
 
                 hand_landmarks_proto.landmark.extend([
@@ -188,7 +196,7 @@ def run(model: str, num_hands: int,
     #     cap.release()
     #     cv2.destroyAllWindows()
     #     sys.exit(1)
-        
+
     detector.close()
     cap.release()
     cv2.destroyAllWindows()
@@ -200,6 +208,13 @@ def crop_top_right(image, width, height):
     # Crop the image
     img_cropped = image[start_row:end_row, start_col:end_col]
     return img_cropped
+
+def get_dist(landmark: NormalizedLandmark):
+    x = landmark.x
+    y = landmark.y
+
+    dist = (x**2+y**2)**0.5
+    return dist
 
 def main():
     parser = argparse.ArgumentParser(
@@ -232,7 +247,7 @@ def main():
              'considered successful.',
         required=False,
         default=0.5)
-    
+
     parser.add_argument(
         '--cameraId', help='Id of camera.', required=False, default=0)
     parser.add_argument(
@@ -249,12 +264,12 @@ def main():
         '--workWidth',
         help='',
         required=False,
-        default=300)
+        default=400)
     parser.add_argument(
         '--workHeight',
         help='Print the handedness and landmarks.',
         required=False,
-        default=300)
+        default=400)
     parser.add_argument(
         '--headless',
         help='Run the script without cam feed.',
@@ -265,13 +280,13 @@ def main():
         help='Print the handedness and landmarks.',
         required=False,
         default=0)
-    
+
     args = parser.parse_args()
 
     run(
         args.model, int(args.numHands), args.minHandDetectionConfidence,
         args.minHandPresenceConfidence, args.minTrackingConfidence,
-        int(args.cameraId), args.frameWidth, args.frameHeight, 
+        int(args.cameraId), args.frameWidth, args.frameHeight,
         int(args.workWidth), int(args.workHeight),
         args.headless, args.debug
         )
