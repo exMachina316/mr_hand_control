@@ -20,6 +20,8 @@ import time
 import cv2
 import mediapipe as mp
 
+import pyautogui
+
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.framework.formats import landmark_pb2
@@ -143,16 +145,17 @@ def run(model: str, num_hands: int,
             for idx in range(len(DETECTION_RESULT.hand_landmarks)):
                 hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
                 handedness = DETECTION_RESULT.handedness[idx]
-                index_tip_dist = get_dist(hand_landmarks[8])
-                thumb_tip_dist = get_dist(hand_landmarks[4])
-                touch = abs(index_tip_dist - thumb_tip_dist)
+                touch = abs(get_dist(hand_landmarks[8], hand_landmarks[4]))
+
                 print(touch)
-                if touch<0.023:
-                    print("\033[91m Touch Detected \033[0m")
+                if touch<0.03:
+                    if handedness[0].category_name == "Left":
+                        print("\033[91m Right Touch Detected \033[0m")
+                    elif handedness[0].category_name == "Right":
+                        print("\033[91m Left Touch Detected \033[0m")
 
                 # Draw the hand landmarks
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-
                 hand_landmarks_proto.landmark.extend([
                     landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y,
                                                     z=landmark.z) for landmark
@@ -209,9 +212,15 @@ def crop_top_right(image, width, height):
     img_cropped = image[start_row:end_row, start_col:end_col]
     return img_cropped
 
-def get_dist(landmark: NormalizedLandmark):
-    x = landmark.x
-    y = landmark.y
+def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
+    x1 = landmark1.x
+    y1 = landmark1.y
+
+    x2 = landmark2.x
+    y2 = landmark2.y
+
+    x = x2 - x1
+    y = y2 - y1
 
     dist = (x**2+y**2)**0.5
     return dist
