@@ -223,7 +223,7 @@ def run(model: str, num_hands: int,
     cv2.destroyAllWindows()
 
 async def send_message():
-    uri = "ws://localhost:8765"
+    uri = "ws://"+ IP +":8765"
     async with websockets.connect(uri) as websocket:
         while True:
             message = ""
@@ -324,4 +324,5 @@ def main():
     # client_thread.join()
 
 if __name__ == '__main__':
+    IP = input("Enter the IP address of the server: ")
     main()

@@ -16,8 +16,10 @@ async def handle_connection(websocket, path):
         await websocket.send("Message received")
 
 async def main():
-    async with websockets.serve(handle_connection, "localhost", 8765):
-        print("Server started at localhost:8765")
+    IP = input("Enter the IP address of the server: ")
+    PORT = 8765
+    async with websockets.serve(handle_connection, IP, PORT):
+        print(f"Server started at {IP}:{PORT}")
         await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
