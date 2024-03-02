@@ -222,8 +222,8 @@ def run(model: str, num_hands: int,
     cap.release()
     cv2.destroyAllWindows()
 
-async def send_message():
-    uri = "ws://"+ IP +":8765"
+async def send_message(ip):
+    uri = "ws://"+ ip +":8765"
     async with websockets.connect(uri) as websocket:
         while True:
             message = ""
@@ -306,8 +306,16 @@ def main():
         help='Print the handedness and landmarks.',
         required=False,
         default=0)
+    
+    parser.add_argument(
+        '--IP',
+        help='IP address of the server',
+        required=True,
+        default="localhost")
 
     args = parser.parse_args()
+
+    IP = args.IP
 
     inference_thread = threading.Thread(target=run, args=(
         args.model, int(args.numHands), args.minHandDetectionConfidence,
@@ -318,11 +326,10 @@ def main():
     )
 
     inference_thread.start()
-    asyncio.run(send_message())
+    asyncio.run(send_message(IP))
 
     # inference_thread.join()
     # client_thread.join()
 
 if __name__ == '__main__':
-    IP = input("Enter the IP address of the server: ")
     main()
