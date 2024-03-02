@@ -3,6 +3,9 @@ import sys
 import time
 
 import threading
+import asyncio
+
+import websockets
 
 import cv2
 import mediapipe as mp
@@ -22,6 +25,8 @@ START_TIME = time.time()
 DETECTION_RESULT = None
 region_width = 300
 region_height = 300
+r_touch = False
+l_touch = False
 
 def crop_top_right(image, width, height):
     # Calculate the coordinates of the top right corner
@@ -69,6 +74,7 @@ def run(model: str, num_hands: int,
         headless: The flag to run the script without cam feed.
         debug: The flag to print the handedness and landmarks.
     """
+    global r_touch, l_touch
 
     # Start capturing video input from the camera
     cap = cv2.VideoCapture(camera_id)
@@ -159,11 +165,11 @@ def run(model: str, num_hands: int,
                 print(touch)
                 if touch<0.03:
                     if handedness[0].category_name == "Left":
-                        print("\033[91m Right Touch Detected \033[0m")
+                        # print("\033[91m Right Touch Detected \033[0m")
                         r_touch = True
 
                     elif handedness[0].category_name == "Right":
-                        print("\033[91m Left Touch Detected \033[0m")
+                        # print("\033[91m Left Touch Detected \033[0m")
                         l_touch = True
 
                 # Draw the hand landmarks
@@ -216,10 +222,25 @@ def run(model: str, num_hands: int,
     cap.release()
     cv2.destroyAllWindows()
 
-def send_message():
-    while True:
-        print("Sending message")
-        time.sleep(0.1)
+async def send_message():
+    uri = "ws://localhost:8765"
+    async with websockets.connect(uri) as websocket:
+        while True:
+            message = ""
+
+            if r_touch:
+                message = "r_touch"
+                print("\033[91m Right Touch Detected \033[0m")
+
+            if l_touch:
+                message = "l_touch"
+                print("\033[91m Left Touch Detected \033[0m")
+                
+            await websocket.send(message)
+
+            # Receive and print the result from the server
+            result = await websocket.recv()
+            print(f"Server response: {result}")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -295,10 +316,9 @@ def main():
         int(args.workWidth), int(args.workHeight),
         args.headless, args.debug)
     )
-    client_thread = threading.Thread(target=send_message)
 
     inference_thread.start()
-    client_thread.start()
+    asyncio.run(send_message())
 
     # inference_thread.join()
     # client_thread.join()

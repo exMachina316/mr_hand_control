@@ -1,7 +1,9 @@
-import pyautogui
-import time
+import pyautogui as pg
 
-while True:
-    x,y = pyautogui.position()
-    print(x,y)
-    time.sleep(0.1)
+x,y = pg.position()
+pg.leftClick(x,y)
+
+# for x in range(200):
+#     print(x)
+#     pg.moveRel(1,0)
+#     time.sleep(0.1)
