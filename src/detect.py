@@ -2,6 +2,8 @@ import argparse
 import sys
 import time
 
+import threading
+
 import cv2
 import mediapipe as mp
 
@@ -20,6 +22,27 @@ START_TIME = time.time()
 DETECTION_RESULT = None
 region_width = 300
 region_height = 300
+
+def crop_top_right(image, width, height):
+    # Calculate the coordinates of the top right corner
+    start_row, start_col = 0, image.shape[1] - width
+    end_row, end_col = start_row + height, start_col + width
+    # Crop the image
+    img_cropped = image[start_row:end_row, start_col:end_col]
+    return img_cropped
+
+def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
+    x1 = landmark1.x
+    y1 = landmark1.y
+
+    x2 = landmark2.x
+    y2 = landmark2.y
+
+    x = x2 - x1
+    y = y2 - y1
+
+    dist = (x**2+y**2)**0.5
+    return dist
 
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
@@ -122,6 +145,9 @@ def run(model: str, num_hands: int,
         FONT_THICKNESS = 1
         HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
+        r_touch = False
+        l_touch = False
+
         if DETECTION_RESULT:
 
             # Draw landmarks and indicate handedness.
@@ -134,8 +160,11 @@ def run(model: str, num_hands: int,
                 if touch<0.03:
                     if handedness[0].category_name == "Left":
                         print("\033[91m Right Touch Detected \033[0m")
+                        r_touch = True
+
                     elif handedness[0].category_name == "Right":
                         print("\033[91m Left Touch Detected \033[0m")
+                        l_touch = True
 
                 # Draw the hand landmarks
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
@@ -187,26 +216,10 @@ def run(model: str, num_hands: int,
     cap.release()
     cv2.destroyAllWindows()
 
-def crop_top_right(image, width, height):
-    # Calculate the coordinates of the top right corner
-    start_row, start_col = 0, image.shape[1] - width
-    end_row, end_col = start_row + height, start_col + width
-    # Crop the image
-    img_cropped = image[start_row:end_row, start_col:end_col]
-    return img_cropped
-
-def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
-    x1 = landmark1.x
-    y1 = landmark1.y
-
-    x2 = landmark2.x
-    y2 = landmark2.y
-
-    x = x2 - x1
-    y = y2 - y1
-
-    dist = (x**2+y**2)**0.5
-    return dist
+def send_message():
+    while True:
+        print("Sending message")
+        time.sleep(0.1)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -275,13 +288,20 @@ def main():
 
     args = parser.parse_args()
 
-    run(
+    inference_thread = threading.Thread(target=run, args=(
         args.model, int(args.numHands), args.minHandDetectionConfidence,
         args.minHandPresenceConfidence, args.minTrackingConfidence,
         int(args.cameraId), args.frameWidth, args.frameHeight,
         int(args.workWidth), int(args.workHeight),
-        args.headless, args.debug
-        )
+        args.headless, args.debug)
+    )
+    client_thread = threading.Thread(target=send_message)
+
+    inference_thread.start()
+    client_thread.start()
+
+    # inference_thread.join()
+    # client_thread.join()
 
 if __name__ == '__main__':
     main()
