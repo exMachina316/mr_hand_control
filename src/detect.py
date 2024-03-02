@@ -290,12 +290,12 @@ def main():
         '--workWidth',
         help='',
         required=False,
-        default=400)
+        default=300)
     parser.add_argument(
         '--workHeight',
         help='Print the handedness and landmarks.',
         required=False,
-        default=400)
+        default=300)
     parser.add_argument(
         '--headless',
         help='Run the script without cam feed.',
