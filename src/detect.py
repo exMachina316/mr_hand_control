@@ -310,7 +310,7 @@ def main():
     parser.add_argument(
         '--IP',
         help='IP address of the server',
-        required=True,
+        required=False,
         default="localhost")
 
     args = parser.parse_args()
