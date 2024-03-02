@@ -20,8 +20,6 @@ import time
 import cv2
 import mediapipe as mp
 
-import pyautogui
-
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.framework.formats import landmark_pb2
