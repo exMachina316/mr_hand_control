@@ -5,12 +5,23 @@ import pyautogui as pg
 
 async def handle_connection(websocket, path):
     async for message in websocket:
-        x,y = pg.position()
-        print(f"Received message: {message}")
+        width, height = pg.size()
 
-        if message == "r_touch":
+        message = message.split(",")
+
+        x,y = pg.position()
+
+        ix = float(message[0])
+        iy = float(message[1])
+
+        if ix>0 and iy>0:
+            x = ix*width
+            y = iy*height
+            pg.moveTo(x, y, duration=0.001)
+
+        if "r_touch" in message:
             pg.rightClick(x,y)
-        elif message == "l_touch":
+        elif "l_touch" in message:
             pg.leftClick(x,y)
 
         await websocket.send("Message received")
@@ -23,4 +34,7 @@ async def main():
         await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Server stopped.")

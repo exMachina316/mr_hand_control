@@ -1,9 +1,8 @@
 import pyautogui as pg
+import time
 
 x,y = pg.position()
-pg.leftClick(x,y)
+width, height = pg.size()
+# pg.leftClick(x,y)
 
-# for x in range(200):
-#     print(x)
-#     pg.moveRel(1,0)
-#     time.sleep(0.1)
+pg.moveRel(-200,0, tween=pg.easeInOutQuad, duration=0.2)

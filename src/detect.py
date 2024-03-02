@@ -9,6 +9,8 @@ import websockets
 
 import cv2
 import mediapipe as mp
+from scipy.stats import linregress
+from numpy import arctan
 
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -27,6 +29,8 @@ region_width = 300
 region_height = 300
 r_touch = False
 l_touch = False
+ix = -1
+iy = -1
 
 def crop_top_right(image, width, height):
     # Calculate the coordinates of the top right corner
@@ -48,6 +52,18 @@ def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
 
     dist = (x**2+y**2)**0.5
     return dist
+
+def get_slope(landmarks: list):
+    x = []
+    y = []
+    for landmark in landmarks:
+        x.append(landmark.x)
+        y.append(landmark.y)
+
+    # Perform linear regression
+    slope, intercept, r_value, p_value, std_err = linregress(x, y)
+
+    return slope
 
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
@@ -74,7 +90,7 @@ def run(model: str, num_hands: int,
         headless: The flag to run the script without cam feed.
         debug: The flag to print the handedness and landmarks.
     """
-    global r_touch, l_touch
+    global r_touch, l_touch, ix, iy
 
     # Start capturing video input from the camera
     cap = cv2.VideoCapture(camera_id)
@@ -153,6 +169,8 @@ def run(model: str, num_hands: int,
 
         r_touch = False
         l_touch = False
+        ix = -1
+        iy = -1
 
         if DETECTION_RESULT:
 
@@ -161,16 +179,22 @@ def run(model: str, num_hands: int,
                 hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
                 handedness = DETECTION_RESULT.handedness[idx]
                 touch = abs(get_dist(hand_landmarks[8], hand_landmarks[4]))
+                # index_vert = get_slope(hand_landmarks[5:8])
+                if handedness[0].category_name == "Left":
+                    ix = hand_landmarks[5].x
+                    iy = hand_landmarks[5].y
 
-                print(touch)
+                # print(round(arctan(index_vert), 2))
+
+                # print(touch)
                 if touch<0.03:
                     if handedness[0].category_name == "Left":
                         # print("\033[91m Right Touch Detected \033[0m")
-                        r_touch = True
+                        l_touch = True
 
                     elif handedness[0].category_name == "Right":
                         # print("\033[91m Left Touch Detected \033[0m")
-                        l_touch = True
+                        r_touch = True
 
                 # Draw the hand landmarks
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
@@ -223,19 +247,19 @@ def run(model: str, num_hands: int,
     cv2.destroyAllWindows()
 
 async def send_message(ip):
-    uri = "ws://"+ ip +":8765"
+    uri = f"ws://{ip}:8765"
     async with websockets.connect(uri) as websocket:
         while True:
-            message = ""
+            message = f"{ix},{iy},"
 
             if r_touch:
-                message = "r_touch"
+                message += "r_touch,"
                 print("\033[91m Right Touch Detected \033[0m")
 
             if l_touch:
-                message = "l_touch"
+                message += "l_touch,"
                 print("\033[91m Left Touch Detected \033[0m")
-                
+
             await websocket.send(message)
 
             # Receive and print the result from the server
@@ -316,6 +340,7 @@ def main():
     args = parser.parse_args()
 
     IP = args.IP
+    print(IP)
 
     inference_thread = threading.Thread(target=run, args=(
         args.model, int(args.numHands), args.minHandDetectionConfidence,
