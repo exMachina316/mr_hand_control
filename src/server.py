@@ -18,31 +18,37 @@ async def handle_connection(websocket, path):
 
         ix = float(message[0])
         iy = float(message[1])
-
-        if ix>0 and iy>0:
-            x = ix*width
-            y = iy*height
-            pg.moveTo(x, y, duration=0.001)
-
-        if "r_touch" in message:
-            print("right_button_down")
-            r_down = True
-            pg.mouseDown(button="right")  
-        elif r_down:
-            print("right_button_up")
-            pg.mouseUp(button="right")
-            r_down = False
         
-        if "l_touch" in message and not l_down:
-            print("left_button_down")
-            l_down = True
-            pg.keyDown('shift')
-            pg.mouseDown(button="middle")
-        elif l_down:
-            print("left_button_up")
-            pg.keyUp('shift')
-            pg.mouseUp(button="middle")
-            l_down = False
+        if "zoom_in" in message:
+            pg.scroll(-10)
+        elif "zoom_out" in message:
+            pg.scroll(10)
+
+        else:
+            if ix>0 and iy>0:
+                x = ix*width
+                y = iy*height
+                pg.moveTo(x, y, duration=0.001)
+
+            if "r_touch" in message:
+                print("right_button_down")
+                r_down = True
+                pg.mouseDown(button="right")  
+            elif r_down:
+                print("right_button_up")
+                pg.mouseUp(button="right")
+                r_down = False
+            
+            if "l_touch" in message and not l_down:
+                print("left_button_down")
+                l_down = True
+                pg.keyDown('shift')
+                pg.mouseDown(button="middle")
+            elif l_down:
+                print("left_button_up")
+                pg.keyUp('shift')
+                pg.mouseUp(button="middle")
+                l_down = False
 
         await websocket.send("Message received")
 

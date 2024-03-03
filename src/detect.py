@@ -30,6 +30,12 @@ l_touch = False
 ix = -1
 iy = -1
 
+zoom_in = False
+zoom_out = False
+
+dx = 0
+dy = 0
+
 def crop_top_right(image, width, height):
     # Calculate the coordinates of the top right corner
     start_row, start_col = 0, image.shape[1] - width
@@ -50,18 +56,6 @@ def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
 
     dist = (x**2+y**2)**0.5
     return dist
-
-def get_slope(landmarks: list):
-    x = []
-    y = []
-    for landmark in landmarks:
-        x.append(landmark.x)
-        y.append(landmark.y)
-
-    # Perform linear regression
-    slope, intercept, r_value, p_value, std_err = linregress(x, y)
-
-    return slope
 
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
@@ -88,7 +82,7 @@ def run(model: str, num_hands: int,
         headless: The flag to run the script without cam feed.
         debug: The flag to print the handedness and landmarks.
     """
-    global r_touch, l_touch, ix, iy
+    global zoom_out, zoom_in, r_touch, l_touch, ix, iy
 
     # Start capturing video input from the camera
     cap = cv2.VideoCapture(camera_id)
@@ -169,17 +163,33 @@ def run(model: str, num_hands: int,
         l_touch = False
         ix = -1
         iy = -1
+        zoom_in = False
+        zoom_out = False
 
         if DETECTION_RESULT:
+            if len(DETECTION_RESULT.hand_landmarks) == 2:
+                h0_index_tip = DETECTION_RESULT.hand_landmarks[0][8]
+                h0_handedness = DETECTION_RESULT.handedness[0][0].category_name
+                
+                h1_index_tip = DETECTION_RESULT.hand_landmarks[1][8]
+                h1_handedness = DETECTION_RESULT.handedness[1][0].category_name
+
+                if h0_handedness != h1_handedness:
+                    dist = get_dist(h0_index_tip, h1_index_tip) - dist
+                    if dist<-0.3:
+                        zoom_in = True
+                    elif dist>0.3:
+                        zoom_out = True
+                else:
+                    dist = 0
 
             # Draw landmarks and indicate handedness.
             for idx in range(len(DETECTION_RESULT.hand_landmarks)):
                 hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
                 handedness = DETECTION_RESULT.handedness[idx]
-                l_touch_check = abs(get_dist(hand_landmarks[8], hand_landmarks[4]))
-                r_touch_check = abs(get_dist(hand_landmarks[12], hand_landmarks[4]))
+                l_touch_check = get_dist(hand_landmarks[8], hand_landmarks[4])
+                r_touch_check = get_dist(hand_landmarks[12], hand_landmarks[4])
 
-                # index_vert = get_slope(hand_landmarks[5:8])
                 if handedness[0].category_name == "Left":
                     ix = hand_landmarks[5].x
                     iy = hand_landmarks[5].y
@@ -258,6 +268,14 @@ async def send_message(ip):
             if l_touch:
                 message += "l_touch,"
                 print("\033[91m Left Touch Detected \033[0m")
+            
+            if zoom_in:
+                message += "zoom_in,"
+                print("\033[91m Zoom In Detected \033[0m")
+
+            if zoom_out:
+                message += "zoom_out,"
+                print("\033[91m Zoom Out Detected \033[0m")
 
             await websocket.send(message)
 
