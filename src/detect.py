@@ -174,6 +174,7 @@ def run(model: str, num_hands: int,
                 h1_handedness = DETECTION_RESULT.handedness[1][0].category_name
 
                 if h0_handedness != h1_handedness:
+                    print("\033[91m Zoom Mode \033[0m")
                     dist = get_dist(h0_index_tip, h1_index_tip) - dist
                     if dist<-0.3:
                         zoom_in = True
