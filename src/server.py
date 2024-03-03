@@ -22,7 +22,7 @@ async def handle_connection(websocket, path):
         if "r_touch" in message:
             pg.mouseDown(button="right")
         else:
-            pg.moseuUp(button="right")
+            pg.mouseUp(button="right")
         
         if "l_touch" in message:
             pg.mouseDown(button="left")
