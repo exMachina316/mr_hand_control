@@ -81,7 +81,7 @@ def run(model: str, num_hands: int,
         headless: The flag to run the script without cam feed.
         debug: The flag to print the handedness and landmarks.
     """
-    global zoom_out, zoom_in, r_touch, l_touch, ix, iy
+    global zoom_out, zoom_in, r_touch, l_touch, ix, iy, dist
 
     # Start capturing video input from the camera
     cap = cv2.VideoCapture(camera_id)
