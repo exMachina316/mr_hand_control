@@ -33,8 +33,7 @@ iy = -1
 zoom_in = False
 zoom_out = False
 
-dx = 0
-dy = 0
+dist = 0
 
 def crop_top_right(image, width, height):
     # Calculate the coordinates of the top right corner
