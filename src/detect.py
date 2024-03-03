@@ -178,7 +178,9 @@ def run(model: str, num_hands: int,
             for idx in range(len(DETECTION_RESULT.hand_landmarks)):
                 hand_landmarks = DETECTION_RESULT.hand_landmarks[idx]
                 handedness = DETECTION_RESULT.handedness[idx]
-                touch = abs(get_dist(hand_landmarks[8], hand_landmarks[4]))
+                l_touch_check = abs(get_dist(hand_landmarks[8], hand_landmarks[4]))
+                r_touch_check = abs(get_dist(hand_landmarks[12], hand_landmarks[4]))
+
                 # index_vert = get_slope(hand_landmarks[5:8])
                 if handedness[0].category_name == "Left":
                     ix = hand_landmarks[5].x
@@ -187,14 +189,13 @@ def run(model: str, num_hands: int,
                 # print(round(arctan(index_vert), 2))
 
                 # print(touch)
-                if touch<0.03:
-                    if handedness[0].category_name == "Left":
-                        # print("\033[91m Right Touch Detected \033[0m")
-                        l_touch = True
+                if l_touch_check<0.03:
+                    # print("\033[91m Right Touch Detected \033[0m")
+                    l_touch = True
 
-                    elif handedness[0].category_name == "Right":
-                        # print("\033[91m Left Touch Detected \033[0m")
-                        r_touch = True
+                if r_touch_check<0.03:
+                    # print("\033[91m Left Touch Detected \033[0m")
+                    r_touch = True
 
                 # Draw the hand landmarks
                 hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()

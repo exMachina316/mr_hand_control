@@ -20,9 +20,14 @@ async def handle_connection(websocket, path):
             pg.moveTo(x, y, duration=0.001)
 
         if "r_touch" in message:
-            pg.rightClick(x,y)
-        elif "l_touch" in message:
-            pg.leftClick(x,y)
+            pg.mouseDown(button="right")
+        else:
+            pg.moseuUp(button="right")
+        
+        if "l_touch" in message:
+            pg.mouseDown(button="left")
+        else:
+            pg.mouseUp(button="left")
 
         await websocket.send("Message received")
 
