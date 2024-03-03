@@ -1,3 +1,4 @@
+opencv-python
 mediapipe
 pyautogui
 websockets
