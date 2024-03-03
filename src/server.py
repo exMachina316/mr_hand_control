@@ -27,19 +27,21 @@ async def handle_connection(websocket, path):
         if "r_touch" in message:
             print("right_button_down")
             r_down = True
-            pg.mouseDown(button="right")
+            pg.mouseDown(button="right")  
         elif r_down:
             print("right_button_up")
             pg.mouseUp(button="right")
             r_down = False
         
-        if "l_touch" in message:
+        if "l_touch" in message and not l_down:
             print("left_button_down")
             l_down = True
-            pg.mouseDown(button="left")
+            pg.keyDown('shift')
+            pg.mouseDown(button="middle")
         elif l_down:
             print("left_button_up")
-            pg.mouseUp(button="left")
+            pg.keyUp('shift')
+            pg.mouseUp(button="middle")
             l_down = False
 
         await websocket.send("Message received")
