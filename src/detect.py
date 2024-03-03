@@ -51,18 +51,6 @@ def get_dist(landmark1: NormalizedLandmark, landmark2: NormalizedLandmark):
     dist = (x**2+y**2)**0.5
     return dist
 
-def get_slope(landmarks: list):
-    x = []
-    y = []
-    for landmark in landmarks:
-        x.append(landmark.x)
-        y.append(landmark.y)
-
-    # Perform linear regression
-    slope, intercept, r_value, p_value, std_err = linregress(x, y)
-
-    return slope
-
 def run(model: str, num_hands: int,
         min_hand_detection_confidence: float,
         min_hand_presence_confidence: float, min_tracking_confidence: float,
