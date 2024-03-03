@@ -264,6 +264,7 @@ async def send_message(ip):
             # Receive and print the result from the server
             result = await websocket.recv()
             print(f"Server response: {result}")
+            time.sleep(0.1)
 
 def main():
     parser = argparse.ArgumentParser(
